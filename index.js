@@ -271,6 +271,23 @@ async function run() {
             }
         })
 
+        /* get a package */
+        app.get('/api/v1/details-packages/:id', async (req, res) => {
+            try {
+                const { id } = req.params;
+                const query = { _id: new ObjectId(id) }
+
+                const result = await packageCollection.findOne(query);
+                console.log(result);
+
+                res.send(result)
+
+            } catch (error) {
+                console.log(error);
+                res.status(500).send({ message: error?.message })
+            }
+        })
+
 
         /* Payment APIs */
         // app.post("/api/v1/create-payment-intent", async (req, res) => {
