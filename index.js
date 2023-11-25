@@ -157,7 +157,11 @@ async function run() {
         //     }
         // })
 
-
+        /**
+         * ============================================
+         * Users APIs
+         * ============================================
+         */
         /* Create user */
         app.post('/api/v1/users', async (req, res) => {
             try {
@@ -191,26 +195,44 @@ async function run() {
             }
         })
 
+        /* update the user of ID */
+        app.put('/api/v1/update-user/:id', async (req, res) => {
+            try {
+                const { id } = req?.params;
+                const query = { _id: new ObjectId(id) }
+                const user = req.body;
+                const updatedUser = {
+                    $set: {
+                        ...user
+                    }
+                }
+                const result = await userCollection.updateOne(query, updatedUser, { upsert: true });
+                res.send(result)
+            } catch (error) {
+                res.status(500).send({ error: true, message: error.message })
+            }
+        })
+
         /* Get all users [admin] */
-        // app.get('/api/v1/users', verifyToken, verifyAdmin, async (_req, res) => {
-        //     const result = await userCollection.find().toArray();
-        //     res.send(result)
-        // })
+        app.get('/api/v1/users', async (_req, res) => {
+            const result = await userCollection.find().toArray();
+            res.send(result)
+        })
 
         /* delete user [admin] */
-        // app.delete('/api/v1/users/:id', verifyToken, verifyAdmin, async (req, res) => {
-        //     try {
-        //         const { id } = req.params;
-        //         const query = { _id: new ObjectId(id) }
+        app.delete('/api/v1/users/:id', async (req, res) => {
+            try {
+                const { id } = req.params;
+                const query = { _id: new ObjectId(id) }
 
-        //         const result = await userCollection.deleteOne(query)
+                const result = await userCollection.deleteOne(query)
 
-        //         res.send(result)
-        //     } catch (error) {
-        //         console.log(error);
-        //         res.status(500).send({ message: error?.message })
-        //     }
-        // })
+                res.send(result)
+            } catch (error) {
+                console.log(error);
+                res.status(500).send({ message: error?.message })
+            }
+        })
 
         /* add admin [admin] */
         // app.patch('/api/v1/users/admin/:id', verifyToken, async (req, res) => {
@@ -256,6 +278,52 @@ async function run() {
         //     }
         // })
 
+        /**
+         * ================================================================
+         * Story APIs
+         * ================================================================
+         */
+        /* inset user story */
+        app.post('/api/v1/user/story', async (req, res) => {
+            try {
+                const story = req.body
+
+                const result = await storyCollection.insertOne(story);
+
+                console.log(result);
+
+                res.send(result)
+
+            } catch (error) {
+                console.log(error);
+                res.status(500).send({ message: error?.message })
+            }
+        })
+
+        /* get user story by package id */
+        app.get('/api/v1/user/story/:id', async (req, res) => {
+            try {
+                const { id } = req.params;
+                const query = { package_id: id }
+
+                const result = await storyCollection.findOne(query);
+
+                console.log(result);
+
+                res.send(result)
+
+            } catch (error) {
+                console.log(error);
+                res.status(500).send({ message: error?.message })
+            }
+        })
+
+        /**
+         * ================================================================
+         * Package APIs
+         * ================================================================
+         */
+
         /* add package */
         app.post('/api/v1/add-packages', async (req, res) => {
             try {
@@ -271,13 +339,54 @@ async function run() {
             }
         })
 
-        /* get a package */
+        /* get a package by ID */
         app.get('/api/v1/details-packages/:id', async (req, res) => {
             try {
                 const { id } = req.params;
                 const query = { _id: new ObjectId(id) }
 
                 const result = await packageCollection.findOne(query);
+                console.log(result);
+
+                res.send(result)
+
+            } catch (error) {
+                console.log(error);
+                res.status(500).send({ message: error?.message })
+            }
+        })
+
+        /* update a package by ID */
+        app.put('/api/v1/update-packages/:id', async (req, res) => {
+            try {
+                const { id } = req.params;
+                const query = { _id: new ObjectId(id) }
+                const thePackage = req.body;
+                const updatedPackage = {
+                    $set: {
+                        ...thePackage
+                    }
+                }
+
+                const result = await packageCollection.updateOne(query, updatedPackage, { upsert: true });
+                console.log(result);
+
+                res.send(result)
+
+            } catch (error) {
+                console.log(error);
+                res.status(500).send({ message: error?.message })
+            }
+        })
+
+        /* get packages by Type */
+        app.get('/api/v1/packages/:type', async (req, res) => {
+            try {
+                const { type } = req.params;
+                const query = { type }
+
+                const result = await packageCollection.find(query).toArray();
+
                 console.log(result);
 
                 res.send(result)
