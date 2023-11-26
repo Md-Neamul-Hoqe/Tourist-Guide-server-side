@@ -39,6 +39,7 @@ async function run() {
         const storyCollection = db.collection('stories');
         const packageCollection = db.collection('packages');
         const userCollection = db.collection('users');
+        const wishListCollection = db.collection('wishLists');
 
         // const cartCollection = db.collection('carts');
         // const paymentCollection = db.collection('payments');
@@ -105,7 +106,7 @@ async function run() {
         //     next();
         // }
 
-        // // console.log(process.env);
+        // console.log(process.env);
         // const setTokenCookie = async (req, res, next) => {
         //     const user = req?.body;
 
@@ -146,16 +147,16 @@ async function run() {
 
         // })
 
-        // /* clear cookie / token of logout user */
-        // app.post('/api/v1/user/logout', (_req, res) => {
-        //     try {
-        //         //console.log('User log out successfully.');
+        /* clear cookie / token of logout user */
+        app.post('/api/v1/user/logout', (_req, res) => {
+            try {
+                //console.log('User log out successfully.');
 
-        //         res.clearCookie('dream-place-token', { maxAge: 0 }).send({ success: true })
-        //     } catch (error) {
-        //         res.status(500).send({ error: true, message: error.message })
-        //     }
-        // })
+                res.clearCookie('dream-place-token', { maxAge: 0 }).send({ success: true })
+            } catch (error) {
+                res.status(500).send({ error: true, message: error.message })
+            }
+        })
 
         /**
          * ============================================
@@ -195,6 +196,20 @@ async function run() {
             }
         })
 
+        /* get the user by email */
+        app.get('/api/v1/current-user/:email', async (req, res) => {
+            try {
+                const { email } = req?.params;
+                const query = { "contactDetails.email": email }
+                const result = await userCollection.findOne(query);
+
+                console.log(query, result);
+                res.send(result)
+            } catch (error) {
+                res.status(500).send({ error: true, message: error.message })
+            }
+        })
+
         /* update the user of ID */
         app.put('/api/v1/update-user/:id', async (req, res) => {
             try {
@@ -217,6 +232,21 @@ async function run() {
         app.get('/api/v1/users', async (_req, res) => {
             const result = await userCollection.find().toArray();
             res.send(result)
+        })
+
+        /* Get all users of a role */
+        app.get('/api/v1/role-users/:role', async (req, res) => {
+            const { role } = req.params;
+
+            const query = {}
+            if (role) {
+                query.role = role;
+
+                const result = await userCollection.find(query).toArray();
+                return res.send(result)
+            }
+
+            res.status(403).send({ message: 'Forbidden access' })
         })
 
         /* delete user [admin] */
@@ -256,35 +286,33 @@ async function run() {
         //     }
         // })
 
-        /* Check current user is admin */
-        // app.get('/api/v1/user/admin/:email', verifyToken, async (req, res) => {
-        //     try {
-        //         const { email } = req.params;
+        /* get current user's role */
+        app.get('/api/v1/user/authorization/:email', async (req, res) => {
+            try {
+                const { email } = req.params;
 
-        //         if (email !== req?.user?.email) return res.status(403).send({ message: 'Access Forbidden' });
+                // if (email !== req?.user?.email) return res.status(403).send({ message: 'Access Forbidden' });
 
-        //         const result = await userCollection.findOne({ email })
-        //         // console.log(result);
+                const query = { "contactDetails.email": email }
+                const result = await userCollection.findOne(query);
+                // console.log(result);
 
-        //         let admin = false;
-        //         if (result?.role) {
-        //             admin = result.role === 'admin'
-        //         }
+                const admin = result.role
 
-        //         res.send({ admin })
-        //     } catch (error) {
-        //         console.log(error);
-        //         res.status(500).send({ message: error?.message })
-        //     }
-        // })
+                res.send({ admin })
+            } catch (error) {
+                console.log(error);
+                res.status(500).send({ message: error?.message })
+            }
+        })
 
         /**
          * ================================================================
          * Story APIs
          * ================================================================
          */
-        /* inset user story */
-        app.post('/api/v1/user/story', async (req, res) => {
+        /* insert user story */
+        app.post('/api/v1/user/create-story', async (req, res) => {
             try {
                 const story = req.body
 
@@ -300,18 +328,31 @@ async function run() {
             }
         })
 
-        /* get user story by package id */
-        app.get('/api/v1/user/story/:id', async (req, res) => {
+        /* get all users stories */
+        app.get('/api/v1/user/stories', async (req, res) => {
             try {
-                const { id } = req.params;
-                const query = { package_id: id }
+                const LimitThree = parseInt(req.query?.max) || 0;
 
-                const result = await storyCollection.findOne(query);
+                console.log(LimitThree);
+                const result = await storyCollection.find().limit(LimitThree).toArray();
 
                 console.log(result);
-
                 res.send(result)
+            } catch (error) {
+                console.log(error);
+                res.status(500).send({ message: error?.message })
+            }
+        })
 
+        /* get all users stories */
+        app.get('/api/v1/user/stories/:id', async (req, res) => {
+            try {
+                const { id } = req.params;
+
+                const result = await storyCollection.findOne({ _id: new ObjectId(id) });
+
+                console.log(result);
+                res.send(result)
             } catch (error) {
                 console.log(error);
                 res.status(500).send({ message: error?.message })
@@ -356,6 +397,80 @@ async function run() {
             }
         })
 
+        /* get all packages */
+        app.get('/api/v1/packages', async (req, res) => {
+            try {
+                const result = await packageCollection.find().toArray();
+
+                console.log(result);
+
+                res.send(result)
+
+            } catch (error) {
+                console.log(error);
+                res.status(500).send({ message: error?.message })
+            }
+        })
+
+        /* get packages by Type */
+        app.get('/api/v1/typed-packages/:type', async (req, res) => {
+            try {
+                const { type } = req.params;
+                const query = { type }
+
+                const result = await packageCollection.find(query).toArray();
+
+                console.log(result);
+
+                res.send(result)
+
+            } catch (error) {
+                console.log(error);
+                res.status(500).send({ message: error?.message })
+            }
+        })
+
+        /* Get all types of the packages */
+        app.get('/api/v1/packages/types', async (req, res) => {
+            try {
+
+                // const packages = await packageCollection.find().toArray();
+
+                const result = await packageCollection.aggregate([
+                    {
+                        $group: {
+                            _id: "$type",
+                            thumbnail: { $first: "$thumbnail" }
+                        }
+                    },
+                    {
+                        $group: {
+                            _id: null,
+                            packages: {
+                                $addToSet: {
+                                    type: '$_id',
+                                    thumbnail: '$thumbnail'
+                                }
+                            }
+                        }
+                    },
+                    {
+                        $project: {
+                            _id: 0,
+                            packages: 1
+                        }
+                    }
+
+                ]).toArray();
+
+                res.send(...result)
+
+            } catch (error) {
+                console.log(error);
+                res.status(500).send({ message: error?.message })
+            }
+        })
+
         /* update a package by ID */
         app.put('/api/v1/update-packages/:id', async (req, res) => {
             try {
@@ -379,24 +494,93 @@ async function run() {
             }
         })
 
-        /* get packages by Type */
-        app.get('/api/v1/packages/:type', async (req, res) => {
+        /* Delete a package */
+        app.delete('/api/v1/delete-packages/:id', async (req, res) => {
             try {
-                const { type } = req.params;
-                const query = { type }
+                const { id } = req.params;
 
-                const result = await packageCollection.find(query).toArray();
+                console.log(id);
+                const result = await packageCollection.deleteOne({ _id: new ObjectId(id) })
 
-                console.log(result);
+                // console.log(result);
 
                 res.send(result)
-
             } catch (error) {
                 console.log(error);
                 res.status(500).send({ message: error?.message })
             }
         })
 
+
+        /**
+         * =========================================================================
+         * Wish List APIs
+         * =========================================================================
+         */
+        /* Add to wish list */
+        app.post('/api/v1/wish-list/add-packages', async (req, res) => {
+            try {
+                /* package_id, user email */
+                const wishPackage = req.body;
+
+                const result = await wishListCollection.insertOne(wishPackage)
+                res.send(result)
+            } catch (error) {
+                console.log(error);
+                res.status(500).send({ message: error?.message })
+            }
+        })
+
+        /* Get the packages as wish list */
+        app.get('/api/v1/wish-list/:email', async (req, res) => {
+            try {
+                const { email } = req.params;
+                const wishList = await wishListCollection.find({ email }).toArray();
+
+                const packageIds = wishList.map(wish => new ObjectId(wish?.package_id))
+
+                const result = await packageCollection.find({ _id: { $in: packageIds } }).toArray();
+
+                console.log(result);
+
+                res.send(result)
+            } catch (error) {
+                console.log(error);
+                res.status(500).send({ message: error?.message })
+            }
+        })
+
+        /* Get a package as wish list from packageCollection */
+        app.get('/api/v1/wish-list/package/:id', async (req, res) => {
+            try {
+                const { id } = req.params;
+
+                const result = await packageCollection.findOne({ _id: new ObjectId(id) })
+
+                // console.log(result);
+
+                res.send(result)
+            } catch (error) {
+                console.log(error);
+                res.status(500).send({ message: error?.message })
+            }
+        })
+
+        /* Remove a package from wishList */
+        app.delete('/api/v1/wish-list/delete-package/:id', async (req, res) => {
+            try {
+                const { id } = req.params;
+
+                const result = await wishListCollection.deleteOne({ package_id: id })
+
+                console.log(result);
+
+                res.send(result)
+            } catch (error) {
+                console.log(error);
+                res.status(500).send({ message: error?.message })
+            }
+        })
 
         /* Payment APIs */
         // app.post("/api/v1/create-payment-intent", async (req, res) => {
@@ -517,100 +701,6 @@ async function run() {
         //     } catch (error) {
         //         console.log(error);
         //         res.status(500).send({ message: error?.message })
-        //     }
-        // })
-
-        // app.get('/api/v1/menu', async (req, res) => {
-        //     try {
-        //         // console.log(req?.query);
-
-        //         const { category } = req?.query;
-        //         let query = {};
-        //         //console.log('menu category: ', category);
-
-        //         if (category) query = { category }
-
-        //         // console.log(query);
-
-        //         const result = await menuCollection.find(query).toArray();
-
-        //         console.log(category, ' menu no. :', result?.length);
-        //         res.send(result)
-        //     } catch (error) {
-        //         console.log(error);
-        //         res.status(500).send({ message: error?.message })
-        //     }
-        // })
-
-        // app.get('/api/v1/menu/:id', async (req, res) => {
-        //     try {
-        //         // console.log(req?.query);
-
-        //         const { id } = req?.params;
-        //         const query = { _id: new ObjectId(id) }
-
-        //         console.log(query);
-
-        //         const result = await menuCollection.findOne(query);
-
-        //         console.log(result);
-        //         res.send(result)
-        //     } catch (error) {
-        //         console.log(error);
-        //         res.status(500).send({ message: error?.message })
-        //     }
-        // })
-
-        // app.patch('/api/v1/menu/:id', verifyToken, verifyAdmin, async (req, res) => {
-        //     try {
-        //         const { id } = req.params;
-        //         const item = req.body;
-
-        //         const query = { _id: new ObjectId(id) }
-
-        //         const updatedItem = {
-        //             $set: {
-        //                 name: item?.name, category: item?.category, recipe: item?.recipe, image: item?.image, price: item?.price
-        //             }
-        //         }
-
-        //         const result = await userCollection.updateOne(query, updatedItem, { upsert: true })
-
-        //         console.log(result);
-        //         return res.send(result)
-        //     } catch (error) {
-        //         console.log(error);
-        //         res.status(500).send({ message: error?.message })
-        //     }
-        // })
-
-
-
-        // app.delete('/api/v1/menu/:id', verifyToken, verifyAdmin, async (req, res) => {
-        //     try {
-        //         const { id } = req.params;
-
-        //         console.log(id);
-        //         const result = await cartCollection.deleteOne({ _id: new ObjectId(id) })
-
-        //         // console.log(result);
-
-        //         res.send(result)
-        //     } catch (error) {
-        //         console.log(error);
-        //         res.status(500).send({ message: error?.message })
-        //     }
-        // })
-
-        // app.get('/api/v1/reviews', async (_req, res) => {
-        //     try {
-        //         const result = await reviewCollection.find().toArray();
-
-        //         res.send(result)
-        //     } catch (error) {
-        //         console.log(error);
-        //         res.status(500).send({ message: error?.message })
-
         //     }
         // })
 
