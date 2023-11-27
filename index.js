@@ -190,7 +190,7 @@ async function run() {
                 const { id } = req?.params;
                 const query = { _id: new ObjectId(id) }
 
-                console.log('User info: ', query);
+                // console.log('User info: ', query);
 
                 const result = await userCollection.findOne(query);
 
@@ -306,7 +306,7 @@ async function run() {
 
                 const query = { "contactDetails.email": email }
                 const result = await userCollection.findOne(query);
-                console.log('Authentic User: ', result);
+                // console.log('Authentic User: ', result);
 
                 const admin = result?.role
 
@@ -556,7 +556,7 @@ async function run() {
 
                 const result = await packageCollection.find({ _id: { $in: packageIds } }).toArray();
 
-                console.log('User Wishlist: ', result);
+                console.log('User Wishlist: ', packageIds);
 
                 res.send(result)
             } catch (error) {
@@ -756,6 +756,8 @@ async function run() {
                 const carItem = req.body;
 
                 const result = await cartCollection.insertOne(carItem)
+
+                console.log('Booked package: ', result);
                 res.send(result)
             } catch (error) {
                 console.log(error);
@@ -763,27 +765,85 @@ async function run() {
             }
         })
 
-        // app.delete('/api/v1/carts/:id', verifyToken, async (req, res) => {
-        //     try {
-        //         const { id } = req.params;
+        /* Booking cancel */
+        app.delete('/api/v1/cancel-bookings/:id', async (req, res) => {
+            try {
+                const { id } = req.params;
+                const email = req.query?.email
 
-        //         // console.log(id);
-        //         const result = await cartCollection.deleteOne({ menuId: id })
+                const result = await cartCollection.deleteOne({ _id: new ObjectId(id) })
 
-        //         // console.log(result);
+                // console.log(result);
 
-        //         res.send(result)
-        //     } catch (error) {
-        //         console.log(error);
-        //         res.status(500).send({ message: error?.message })
-        //     }
-        // })
+                res.send(result)
+            } catch (error) {
+                console.log(error);
+                res.status(500).send({ message: error?.message })
+            }
+        })
 
-        app.get('/api/v1/carts', async (req, res) => {
+        /* Get package booking status */
+        app.get('/api/v1/isBooked/:id', async (req, res) => {
             try {
                 const { email } = req.query
+                const { id } = req.params
+                const query = { package_id: id, 'touristInfo.email': email }
+                const result = await cartCollection.findOne(query);
+                let isBooked = { isBooked: false, bookingId: null };
 
-                const result = await cartCollection.find({ email }).toArray();
+                // console.log(result);
+                if (result) isBooked = { isBooked: true, bookingId: result?._id };
+
+                res.send(isBooked)
+            } catch (error) {
+                console.log(error);
+                res.status(500).send({ message: error?.message })
+            }
+        })
+
+        /* Get all user bookings */
+        app.get('/api/v1/bookings', async (req, res) => {
+            try {
+                const { email } = req.query
+                const query = { 'touristInfo.email': email }
+                const result = await cartCollection.find(query).toArray();
+                res.send(result)
+            } catch (error) {
+                console.log(error);
+                res.status(500).send({ message: error?.message })
+            }
+        })
+
+        /* Get guide's all trips  */
+        app.get('/api/v1/guide-trips/:id', async (req, res) => {
+            try {
+                const { id } = req.params
+                const query = { "guideInfo._id": id }
+                const result = await cartCollection.find(query).toArray();
+
+                console.log('Guide Trips Reserved: ', result);
+                res.send(result)
+            } catch (error) {
+                console.log(error);
+                res.status(500).send({ message: error?.message })
+            }
+        })
+
+        /* update guide's trip's status  */
+        app.patch('/api/v1/update-trips/:id', async (req, res) => {
+            try {
+                const { id } = req.params
+                const trip = req.body
+                const query = { _id: new ObjectId(id) }
+
+                const updatedTrip = {
+                    $set: {
+                        ...trip
+                    }
+                }
+                const result = await cartCollection.updateOne(query, updatedTrip);
+
+                console.log('Updated Trip: ', updatedTrip, result);
                 res.send(result)
             } catch (error) {
                 console.log(error);
