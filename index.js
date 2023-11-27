@@ -40,15 +40,15 @@ async function run() {
         const packageCollection = db.collection('packages');
         const userCollection = db.collection('users');
         const wishListCollection = db.collection('wishLists');
+        const reviewCollection = db.collection('reviews');
 
-        // const cartCollection = db.collection('carts');
+        const cartCollection = db.collection('carts');
         // const paymentCollection = db.collection('payments');
 
 
-        /* Auth api */
+        /* Auth APIs */
 
         /* Middleware JWT implementation */
-
         // const verifyToken = async (req, res, next) => {
         //     try {
         //         // console.log('the token to be verified: ', req?.cookies);
@@ -171,7 +171,7 @@ async function run() {
                 const query = { "contactDetails.email": user?.contactDetails?.email }
                 const existingUser = await userCollection.findOne(query);
 
-                // console.log(existingUser);
+                console.log('is Existing User: ', existingUser);
 
                 if (existingUser)
                     return res.send({ message: `Welcome back ${existingUser?.name}${existingUser?.role ? ' as ' + existingUser?.role : 'user.'}`, insertedId: null })
@@ -189,7 +189,12 @@ async function run() {
             try {
                 const { id } = req?.params;
                 const query = { _id: new ObjectId(id) }
+
+                console.log('User info: ', query);
+
                 const result = await userCollection.findOne(query);
+
+                console.log(result);
                 res.send(result)
             } catch (error) {
                 res.status(500).send({ error: true, message: error.message })
@@ -203,7 +208,7 @@ async function run() {
                 const query = { "contactDetails.email": email }
                 const result = await userCollection.findOne(query);
 
-                console.log(query, result);
+                // console.log(query, result);
                 res.send(result)
             } catch (error) {
                 res.status(500).send({ error: true, message: error.message })
@@ -221,7 +226,9 @@ async function run() {
                         ...user
                     }
                 }
-                const result = await userCollection.updateOne(query, updatedUser, { upsert: true });
+
+                console.log('Will Update user: ', updatedUser);
+                const result = await userCollection.updateOne(query, updatedUser);
                 res.send(result)
             } catch (error) {
                 res.status(500).send({ error: true, message: error.message })
@@ -239,14 +246,16 @@ async function run() {
             const { role } = req.params;
 
             const query = {}
-            if (role) {
-                query.role = role;
 
-                const result = await userCollection.find(query).toArray();
-                return res.send(result)
-            }
+            if (role) query.role = role;
 
-            res.status(403).send({ message: 'Forbidden access' })
+            // console.log(query);
+
+            const result = await userCollection.find(query).toArray();
+            return res.send(result)
+
+
+            // res.status(403).send({ message: 'Forbidden access' })
         })
 
         /* delete user [admin] */
@@ -254,6 +263,8 @@ async function run() {
             try {
                 const { id } = req.params;
                 const query = { _id: new ObjectId(id) }
+
+                console.log('delete user: ', query);
 
                 const result = await userCollection.deleteOne(query)
 
@@ -295,9 +306,9 @@ async function run() {
 
                 const query = { "contactDetails.email": email }
                 const result = await userCollection.findOne(query);
-                // console.log(result);
+                console.log('Authentic User: ', result);
 
-                const admin = result.role
+                const admin = result?.role
 
                 res.send({ admin })
             } catch (error) {
@@ -318,7 +329,7 @@ async function run() {
 
                 const result = await storyCollection.insertOne(story);
 
-                console.log(result);
+                // console.log(result);
 
                 res.send(result)
 
@@ -336,7 +347,7 @@ async function run() {
                 console.log(LimitThree);
                 const result = await storyCollection.find().limit(LimitThree).toArray();
 
-                console.log(result);
+                // console.log(result);
                 res.send(result)
             } catch (error) {
                 console.log(error);
@@ -351,7 +362,7 @@ async function run() {
 
                 const result = await storyCollection.findOne({ _id: new ObjectId(id) });
 
-                console.log(result);
+                // console.log(result);
                 res.send(result)
             } catch (error) {
                 console.log(error);
@@ -369,8 +380,11 @@ async function run() {
         app.post('/api/v1/add-packages', async (req, res) => {
             try {
                 const item = req.body;
+
+                // console.log('package will be added: ', item);
+
                 const result = await packageCollection.insertOne(item);
-                console.log(result);
+
 
                 res.send(result)
 
@@ -387,7 +401,7 @@ async function run() {
                 const query = { _id: new ObjectId(id) }
 
                 const result = await packageCollection.findOne(query);
-                console.log(result);
+                // console.log(id, ' package ', result);
 
                 res.send(result)
 
@@ -400,9 +414,11 @@ async function run() {
         /* get all packages */
         app.get('/api/v1/packages', async (req, res) => {
             try {
-                const result = await packageCollection.find().toArray();
+                const max = parseInt(req.query?.max) || 0;
 
-                console.log(result);
+                const result = await packageCollection.find().limit(max).toArray();
+
+                // console.log('All packages: ', result);
 
                 res.send(result)
 
@@ -420,7 +436,7 @@ async function run() {
 
                 const result = await packageCollection.find(query).toArray();
 
-                console.log(result);
+                // console.log(type, 'packages: ', result);
 
                 res.send(result)
 
@@ -433,9 +449,6 @@ async function run() {
         /* Get all types of the packages */
         app.get('/api/v1/packages/types', async (req, res) => {
             try {
-
-                // const packages = await packageCollection.find().toArray();
-
                 const result = await packageCollection.aggregate([
                     {
                         $group: {
@@ -484,7 +497,8 @@ async function run() {
                 }
 
                 const result = await packageCollection.updateOne(query, updatedPackage, { upsert: true });
-                console.log(result);
+
+                console.log('Package updated: ', result);
 
                 res.send(result)
 
@@ -499,7 +513,7 @@ async function run() {
             try {
                 const { id } = req.params;
 
-                console.log(id);
+                console.log(id, ' package will be deleted.');
                 const result = await packageCollection.deleteOne({ _id: new ObjectId(id) })
 
                 // console.log(result);
@@ -524,14 +538,15 @@ async function run() {
                 const wishPackage = req.body;
 
                 const result = await wishListCollection.insertOne(wishPackage)
-                res.send(result)
+
+                res.send('Added to wish list: ', result)
             } catch (error) {
                 console.log(error);
                 res.status(500).send({ message: error?.message })
             }
         })
 
-        /* Get the packages as wish list */
+        /* Get the packages in wish list for the user email */
         app.get('/api/v1/wish-list/:email', async (req, res) => {
             try {
                 const { email } = req.params;
@@ -541,7 +556,7 @@ async function run() {
 
                 const result = await packageCollection.find({ _id: { $in: packageIds } }).toArray();
 
-                console.log(result);
+                console.log('User Wishlist: ', result);
 
                 res.send(result)
             } catch (error) {
@@ -573,12 +588,44 @@ async function run() {
 
                 const result = await wishListCollection.deleteOne({ package_id: id })
 
-                console.log(result);
+                console.log('Removed from wishList: ', result);
 
                 res.send(result)
             } catch (error) {
                 console.log(error);
                 res.status(500).send({ message: error?.message })
+            }
+        })
+
+        /**
+        * ================================================================
+        * REVIEW APIs
+        * ================================================================
+        */
+
+        /* insert a review */
+        app.post('/api/v1/create-reviews', async (req, res) => {
+            try {
+                const review = req.body;
+
+                const result = await reviewCollection.insertOne(review);
+                // console.log(result);
+                res.send(result)
+            } catch (error) {
+
+            }
+        })
+
+        /* get all review of a guide */
+        app.get('/api/v1/reviews/:id', async (req, res) => {
+            try {
+                const query = { guide_id: req.params?.id }
+
+                const result = await reviewCollection.find(query).toArray();
+                // console.log(result);
+                res.send(result)
+            } catch (error) {
+
             }
         })
 
@@ -704,17 +751,17 @@ async function run() {
         //     }
         // })
 
-        // app.post('/api/v1/carts', verifyToken, async (req, res) => {
-        //     try {
-        //         const carItem = req.body;
+        app.post('/api/v1/create-booking', async (req, res) => {
+            try {
+                const carItem = req.body;
 
-        //         const result = await cartCollection.insertOne(carItem)
-        //         res.send(result)
-        //     } catch (error) {
-        //         console.log(error);
-        //         res.status(500).send({ message: error?.message })
-        //     }
-        // })
+                const result = await cartCollection.insertOne(carItem)
+                res.send(result)
+            } catch (error) {
+                console.log(error);
+                res.status(500).send({ message: error?.message })
+            }
+        })
 
         // app.delete('/api/v1/carts/:id', verifyToken, async (req, res) => {
         //     try {
@@ -732,17 +779,17 @@ async function run() {
         //     }
         // })
 
-        // app.get('/api/v1/carts', verifyToken, async (req, res) => {
-        //     try {
-        //         const { email } = req.query
+        app.get('/api/v1/carts', async (req, res) => {
+            try {
+                const { email } = req.query
 
-        //         const result = await cartCollection.find({ email }).toArray();
-        //         res.send(result)
-        //     } catch (error) {
-        //         console.log(error);
-        //         res.status(500).send({ message: error?.message })
-        //     }
-        // })
+                const result = await cartCollection.find({ email }).toArray();
+                res.send(result)
+            } catch (error) {
+                console.log(error);
+                res.status(500).send({ message: error?.message })
+            }
+        })
 
     } catch (error) {
         console.log(error);
