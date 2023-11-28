@@ -43,115 +43,114 @@ async function run() {
         const reviewCollection = db.collection('reviews');
 
         const cartCollection = db.collection('carts');
+        const planeCollection = db.collection('planes');
         // const paymentCollection = db.collection('payments');
 
 
         /* Auth APIs */
 
         /* Middleware JWT implementation */
-        // const verifyToken = async (req, res, next) => {
-        //     try {
-        //         // console.log('the token to be verified: ', req?.cookies);
-        //         const token = req?.cookies?.[ "dream-place-token" ];
+        const verifyToken = async (req, res, next) => {
+            try {
+                // console.log('the token to be verified: ', req?.cookies);
+                const token = req?.cookies?.[ "dream-place-token" ];
 
 
-        //         if (!token) return res.status(401).send({ message: 'Unauthorized access' })
+                if (!token) return res.status(401).send({ message: 'Unauthorized access' })
 
-        //         jsonwebtoken.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
-        //             // console.log(err);
-        //             if (err) {
-        //                 // console.log(err);
-        //                 return res.status(401).send({ message: 'You are not authorized' })
-        //             }
+                jsonwebtoken.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+                    // console.log(err);
+                    if (err) {
+                        // console.log(err);
+                        return res.status(401).send({ message: 'You are not authorized' })
+                    }
 
-        //             // console.log(decoded);
-        //             req.user = decoded;
-        //             next();
-        //         })
-        //     } catch (error) {
-        //         // console.log(error);
-        //         res.status(500).send({ message: error?.message || error?.errorText });
-        //     }
-        // }
+                    // console.log(decoded);
+                    req.user = decoded;
+                    next();
+                })
+            } catch (error) {
+                // console.log(error);
+                res.status(500).send({ message: error?.message || error?.errorText });
+            }
+        }
 
-        // /* verify admin after verify token */
-        // const verifyGuide = async (req, res, next) => {
-        //     // const { email } = req?.params;
-        //     // const token = req?.cookies[ 'dream-place-token' ];
-        //     const { email } = req?.user;
-        //     // console.log(email);
-        //     const query = { email }
+        /* verify admin after verify token */
+        const verifyGuide = async (req, res, next) => {
+            // const { email } = req?.params;
+            // const token = req?.cookies[ 'dream-place-token' ];
+            const { email } = req?.user;
+            console.log(email);
+            const query = { "contactDetails.email":email }
 
-        //     const theUser = await userCollection.findOne(query)
-        //     //console.log('isGuide : ', theUser);
+            const theUser = await userCollection.findOne(query)
+            console.log('isGuide : ', theUser);
 
-        //     const isGuide = theUser?.role === 'guide'
-        //     if (!isGuide) res.status(403).send({ message: 'Access Forbidden' })
+            const isGuide = theUser?.role === 'guide'
+            if (!isGuide) res.status(403).send({ message: 'Access Forbidden' })
 
-        //     next();
-        // }
-        // const verifyAdmin = async (req, res, next) => {
-        //     // const { email } = req?.params;
-        //     // const token = req?.cookies[ 'dream-place-token' ];
-        //     const { email } = req?.user;
-        //     // console.log(email);
-        //     const query = { email }
+            next();
+        }
+        
+        const verifyAdmin = async (req, res, next) => {
+            // const { email } = req?.params;
+            // const token = req?.cookies[ 'dream-place-token' ];
+            const { email } = req?.user;
+            // console.log(email);
+            const query = { "contactDetails.email":email }
 
-        //     const theUser = await userCollection.findOne(query)
-        //     //console.log('isAdmin : ', theUser);
+            const theUser = await userCollection.findOne(query)
+            //console.log('isAdmin : ', theUser);
 
-        //     const isAdmin = theUser?.role === 'admin'
-        //     if (!isAdmin) res.status(403).send({ message: 'Access Forbidden' })
+            const isAdmin = theUser?.role === 'admin'
+            if (!isAdmin) res.status(403).send({ message: 'Access Forbidden' })
 
-        //     next();
-        // }
+            next();
+        }
 
         // console.log(process.env);
-        // const setTokenCookie = async (req, res, next) => {
-        //     const user = req?.body;
+        const setTokenCookie = async (req, res, next) => {
+            const user = req?.body;
 
-        //     // console.log(user);
+            // console.log(user);
 
-        //     if (user?.email) {
-        //         const token = jsonwebtoken.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '24h' })
+            if (user?.email) {
+                const token = jsonwebtoken.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '24h' })
 
-        //         // console.log('Token generated: ', token);
-        //         res
-        //             .cookie('dream-place-token', token, {
-        //                 httpOnly: true,
-        //                 secure: process.env.NODE_ENV === 'production',
-        //                 sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
-        //             })
-        //         req[ "dream-place-token" ] = token;
+                // console.log('Token generated: ', token);
+                res
+                    .cookie('dream-place-token', token, {
+                        httpOnly: true,
+                        secure: process.env.NODE_ENV === 'production',
+                        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+                    })
+                req[ "dream-place-token" ] = token;
 
-        //         console.log('Token Created: ', req[ "dream-place-token" ]);
-        //         next();
-        //     }
-        // }
+                // console.log('Token Created: ', req[ "dream-place-token" ]);
+                next();
+            }
+        }
 
-        // /* Create JWT */
-        // app.post('/api/v1/auth/jwt', setTokenCookie, (req, res) => {
-        //     try {
-        //         const token = req[ "dream-place-token" ];
+        /* Create JWT */
+        app.post('/api/v1/auth/jwt', setTokenCookie, (req, res) => {
+            try {
+                const token = req[ "dream-place-token" ];
 
-        //         console.log('The user: ', user);
-        //         console.log('token in cookie: ', token);
+                // console.log('token in cookie: ', token);
 
-        //         if (!token) return res.status(400).send({ success: false, message: 'Unknown error occurred' })
+                if (!token) return res.status(400).send({ success: false, message: 'Unknown error occurred' })
 
-        //         console.log('User sign in successfully.');
-        //         res.send({ success: true })
-        //     } catch (error) {
-        //         res.status(500).send({ error: true, message: error.message })
-        //     }
+                console.log('User sign in successfully.');
+                res.send({ success: true })
+            } catch (error) {
+                res.send({ error: true, message: error.message })
+            }
 
-        // })
+        })
 
         /* clear cookie / token of logout user */
         app.post('/api/v1/user/logout', (_req, res) => {
             try {
-                //console.log('User log out successfully.');
-
                 res.clearCookie('dream-place-token', { maxAge: 0 }).send({ success: true })
             } catch (error) {
                 res.status(500).send({ error: true, message: error.message })
@@ -194,7 +193,7 @@ async function run() {
 
                 const result = await userCollection.findOne(query);
 
-                console.log(result);
+                console.log('User with a id: ', result);
                 res.send(result)
             } catch (error) {
                 res.status(500).send({ error: true, message: error.message })
@@ -216,7 +215,7 @@ async function run() {
         })
 
         /* update the user of ID */
-        app.put('/api/v1/update-user/:id', async (req, res) => {
+        app.put('/api/v1/update-user/:id', verifyToken, verifyAdmin, async (req, res) => {
             try {
                 const { id } = req?.params;
                 const query = { _id: new ObjectId(id) }
@@ -236,7 +235,7 @@ async function run() {
         })
 
         /* Get all users [admin] */
-        app.get('/api/v1/users', async (_req, res) => {
+        app.get('/api/v1/users', verifyToken, verifyAdmin, async (_req, res) => {
             const result = await userCollection.find().toArray();
             res.send(result)
         })
@@ -259,7 +258,7 @@ async function run() {
         })
 
         /* delete user [admin] */
-        app.delete('/api/v1/users/:id', async (req, res) => {
+        app.delete('/api/v1/users/:id', verifyToken, verifyAdmin, async (req, res) => {
             try {
                 const { id } = req.params;
                 const query = { _id: new ObjectId(id) }
@@ -323,7 +322,7 @@ async function run() {
          * ================================================================
          */
         /* insert user story */
-        app.post('/api/v1/user/create-story', async (req, res) => {
+        app.post('/api/v1/user/create-story', verifyToken, async (req, res) => {
             try {
                 const story = req.body
 
@@ -344,7 +343,6 @@ async function run() {
             try {
                 const LimitThree = parseInt(req.query?.max) || 0;
 
-                console.log(LimitThree);
                 const result = await storyCollection.find().limit(LimitThree).toArray();
 
                 // console.log(result);
@@ -355,7 +353,7 @@ async function run() {
             }
         })
 
-        /* get all users stories */
+        /* get a story */
         app.get('/api/v1/user/stories/:id', async (req, res) => {
             try {
                 const { id } = req.params;
@@ -377,7 +375,7 @@ async function run() {
          */
 
         /* add package */
-        app.post('/api/v1/add-packages', async (req, res) => {
+        app.post('/api/v1/add-packages', verifyToken, verifyAdmin, async (req, res) => {
             try {
                 const item = req.body;
 
@@ -447,7 +445,7 @@ async function run() {
         })
 
         /* Get all types of the packages */
-        app.get('/api/v1/packages/types', async (req, res) => {
+        app.get('/api/v1/packages/types', async (_req, res) => {
             try {
                 const result = await packageCollection.aggregate([
                     {
@@ -485,7 +483,7 @@ async function run() {
         })
 
         /* update a package by ID */
-        app.put('/api/v1/update-packages/:id', async (req, res) => {
+        app.put('/api/v1/update-packages/:id', verifyToken, verifyAdmin, async (req, res) => {
             try {
                 const { id } = req.params;
                 const query = { _id: new ObjectId(id) }
@@ -509,7 +507,7 @@ async function run() {
         })
 
         /* Delete a package */
-        app.delete('/api/v1/delete-packages/:id', async (req, res) => {
+        app.delete('/api/v1/delete-packages/:id', verifyToken, verifyAdmin, async (req, res) => {
             try {
                 const { id } = req.params;
 
@@ -531,8 +529,9 @@ async function run() {
          * Wish List APIs
          * =========================================================================
          */
+
         /* Add to wish list */
-        app.post('/api/v1/wish-list/add-packages', async (req, res) => {
+        app.post('/api/v1/wish-list/add-packages', verifyToken, async (req, res) => {
             try {
                 /* package_id, user email */
                 const wishPackage = req.body;
@@ -547,7 +546,7 @@ async function run() {
         })
 
         /* Get the packages in wish list for the user email */
-        app.get('/api/v1/wish-list/:email', async (req, res) => {
+        app.get('/api/v1/wish-list/:email', verifyToken, async (req, res) => {
             try {
                 const { email } = req.params;
                 const wishList = await wishListCollection.find({ email }).toArray();
@@ -566,7 +565,7 @@ async function run() {
         })
 
         /* Get a package as wish list from packageCollection */
-        app.get('/api/v1/wish-list/package/:id', async (req, res) => {
+        app.get('/api/v1/wish-list/package/:id', verifyToken, async (req, res) => {
             try {
                 const { id } = req.params;
 
@@ -582,7 +581,7 @@ async function run() {
         })
 
         /* Remove a package from wishList */
-        app.delete('/api/v1/wish-list/delete-package/:id', async (req, res) => {
+        app.delete('/api/v1/wish-list/delete-package/:id', verifyToken, async (req, res) => {
             try {
                 const { id } = req.params;
 
@@ -604,7 +603,7 @@ async function run() {
         */
 
         /* insert a review */
-        app.post('/api/v1/create-reviews', async (req, res) => {
+        app.post('/api/v1/create-reviews', verifyToken, async (req, res) => {
             try {
                 const review = req.body;
 
@@ -617,7 +616,7 @@ async function run() {
         })
 
         /* get all review of a guide */
-        app.get('/api/v1/reviews/:id', async (req, res) => {
+        app.get('/api/v1/reviews/:id', verifyToken, async (req, res) => {
             try {
                 const query = { guide_id: req.params?.id }
 
@@ -751,7 +750,12 @@ async function run() {
         //     }
         // })
 
-        app.post('/api/v1/create-booking', async (req, res) => {
+        /**
+        * ================================================================
+        * BOOKING APIs
+        * ================================================================
+        */
+        app.post('/api/v1/create-booking', verifyToken, async (req, res) => {
             try {
                 const carItem = req.body;
 
@@ -766,7 +770,7 @@ async function run() {
         })
 
         /* Booking cancel */
-        app.delete('/api/v1/cancel-bookings/:id', async (req, res) => {
+        app.delete('/api/v1/cancel-bookings/:id', verifyToken, async (req, res) => {
             try {
                 const { id } = req.params;
                 const email = req.query?.email
@@ -783,13 +787,14 @@ async function run() {
         })
 
         /* Get package booking status */
-        app.get('/api/v1/isBooked/:id', async (req, res) => {
+        app.get('/api/v1/isBooked/:id', verifyToken, async (req, res) => {
             try {
                 const { email } = req.query
                 const { id } = req.params
                 const query = { package_id: id, 'touristInfo.email': email }
                 const result = await cartCollection.findOne(query);
-                let isBooked = { isBooked: false, bookingId: null };
+                const countBookings = (await cartCollection.find().toArray()).length;
+                let isBooked = { isBooked: false, bookingId: null, countBookings };
 
                 // console.log(result);
                 if (result) isBooked = { isBooked: true, bookingId: result?._id };
@@ -802,7 +807,7 @@ async function run() {
         })
 
         /* Get all user bookings */
-        app.get('/api/v1/bookings', async (req, res) => {
+        app.get('/api/v1/bookings', verifyToken, async (req, res) => {
             try {
                 const { email } = req.query
                 const query = { 'touristInfo.email': email }
@@ -815,13 +820,13 @@ async function run() {
         })
 
         /* Get guide's all trips  */
-        app.get('/api/v1/guide-trips/:id', async (req, res) => {
+        app.get('/api/v1/guide-trips/:id', verifyToken, verifyGuide, async (req, res) => {
             try {
                 const { id } = req.params
                 const query = { "guideInfo._id": id }
                 const result = await cartCollection.find(query).toArray();
 
-                console.log('Guide Trips Reserved: ', result);
+                // console.log('Guide Trips Reserved: ', result);
                 res.send(result)
             } catch (error) {
                 console.log(error);
@@ -830,7 +835,7 @@ async function run() {
         })
 
         /* update guide's trip's status  */
-        app.patch('/api/v1/update-trips/:id', async (req, res) => {
+        app.patch('/api/v1/update-trips/:id', verifyToken, verifyGuide, async (req, res) => {
             try {
                 const { id } = req.params
                 const trip = req.body
@@ -843,7 +848,27 @@ async function run() {
                 }
                 const result = await cartCollection.updateOne(query, updatedTrip);
 
-                console.log('Updated Trip: ', updatedTrip, result);
+                // console.log('Updated Trip: ', updatedTrip, result);
+                res.send(result)
+            } catch (error) {
+                console.log(error);
+                res.status(500).send({ message: error?.message })
+            }
+        })
+
+        /**
+         * ================================================================
+         * TOUR PLANE APIs
+         * ================================================================
+        */
+
+        app.get('/api/v1/tour-plane/:type', async (req, res) => {
+            try {
+                const { type } = req.params
+                const query = { type }
+                const result = await planeCollection.findOne(query)
+
+                console.log('tour plane: ', result);
                 res.send(result)
             } catch (error) {
                 console.log(error);
