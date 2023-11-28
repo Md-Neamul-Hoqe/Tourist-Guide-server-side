@@ -41,6 +41,7 @@ async function run() {
         const userCollection = db.collection('users');
         const wishListCollection = db.collection('wishLists');
         const reviewCollection = db.collection('reviews');
+        const blogCollection = db.collection('blogs');
 
         const cartCollection = db.collection('carts');
         const planeCollection = db.collection('planes');
@@ -81,7 +82,7 @@ async function run() {
             // const token = req?.cookies[ 'dream-place-token' ];
             const { email } = req?.user;
             console.log(email);
-            const query = { "contactDetails.email":email }
+            const query = { "contactDetails.email": email }
 
             const theUser = await userCollection.findOne(query)
             console.log('isGuide : ', theUser);
@@ -91,13 +92,13 @@ async function run() {
 
             next();
         }
-        
+
         const verifyAdmin = async (req, res, next) => {
             // const { email } = req?.params;
             // const token = req?.cookies[ 'dream-place-token' ];
             const { email } = req?.user;
             // console.log(email);
-            const query = { "contactDetails.email":email }
+            const query = { "contactDetails.email": email }
 
             const theUser = await userCollection.findOne(query)
             //console.log('isAdmin : ', theUser);
@@ -875,7 +876,22 @@ async function run() {
                 res.status(500).send({ message: error?.message })
             }
         })
+        /**
+                 * ================================================================
+                 * Blog post APIs
+                 * ================================================================
+                */
+        app.get('/api/v1/blogs', async (req, res) => {
+            try {
+                const result = await blogCollection.find().toArray();
 
+                console.log('Blog Posts: ', result);
+                res.send(result)
+            } catch (error) {
+                console.log(error);
+                res.status(500).send({ message: error?.message })
+            }
+        })
     } catch (error) {
         console.log(error);
     }
