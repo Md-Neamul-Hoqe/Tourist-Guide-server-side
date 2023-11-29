@@ -58,7 +58,7 @@ async function run() {
             try {
                 // console.log('the token to be verified: ', req?.cookies);
                 const token = req?.cookies?.[ "dream-place-token" ];
-                console.log('token from browser cookie: ', token);
+                // console.log('token from browser cookie: ', token);
 
                 if (!token) return res.status(401).send({ message: 'Unauthorized access' })
 
@@ -69,7 +69,7 @@ async function run() {
                         return res.status(401).send({ message: 'You are not authorized' })
                     }
 
-                    console.log('Decoded token: ', decoded);
+                    // console.log('Decoded token: ', decoded);
                     req.user = decoded;
                     next();
                 })
@@ -128,10 +128,10 @@ async function run() {
                     .cookie('dream-place-token', token, {
                         // domain: [ "tourist-guides-mnh.web.app", "localhost:5173" ],
                         httpOnly: true,
-                        secure: process.env.NODE_ENV === 'production',
-                        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
-                        // secure: true,
-                        // sameSite: 'none'
+                        // secure: process.env.NODE_ENV === 'production',
+                        // sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+                        secure: true,
+                        sameSite: 'none'
                     })
 
                 req[ "dream-place-token" ] = token;
@@ -150,7 +150,7 @@ async function run() {
 
                 if (!token) return res.status(400).send({ success: false, message: 'Unknown error occurred' })
 
-                console.log('User sign in successfully.');
+                // console.log('User sign in successfully.');
                 res.send({ success: true })
             } catch (error) {
                 res.send({ error: true, message: error.message })
@@ -180,7 +180,7 @@ async function run() {
                 const query = { "contactDetails.email": user?.contactDetails?.email }
                 const existingUser = await userCollection.findOne(query);
 
-                console.log('is Existing User: ', existingUser);
+                // console.log('is Existing User: ', existingUser);
 
                 if (existingUser)
                     return res.send({ message: `Welcome back ${existingUser?.name}${existingUser?.role ? ' as ' + existingUser?.role : 'user.'}`, insertedId: null })
@@ -211,18 +211,19 @@ async function run() {
         })
 
         /* update the user of ID [admin] */
-        app.put('/api/v1/update-user/:id', verifyToken, verifyAdmin, async (req, res) => {
+        app.patch('/api/v1/update-user/:id', verifyToken, async (req, res) => {
             try {
                 const { id } = req?.params;
                 const query = { _id: new ObjectId(id) }
                 const user = req.body;
+                
                 const updatedUser = {
                     $set: {
                         ...user
                     }
                 }
 
-                console.log('Will Update user: ', updatedUser);
+                // console.log('Will Update user: ', updatedUser);
                 const result = await userCollection.updateOne(query, updatedUser);
                 res.send(result)
             } catch (error) {
@@ -247,7 +248,7 @@ async function run() {
                 const { id } = req.params;
                 const query = { _id: new ObjectId(id) }
 
-                console.log('delete user: ', query);
+                // console.log('delete user: ', query);
 
                 const result = await userCollection.deleteOne(query)
 
@@ -490,7 +491,7 @@ async function run() {
 
                 const result = await packageCollection.updateOne(query, updatedPackage, { upsert: true });
 
-                console.log('Package updated: ', result);
+                // console.log('Package updated: ', result);
 
                 res.send(result)
 
@@ -549,7 +550,7 @@ async function run() {
 
                 const result = await packageCollection.find({ _id: { $in: packageIds } }).toArray();
 
-                console.log('User Wishlist: ', packageIds);
+                // console.log('User Wishlist: ', packageIds);
 
                 res.send(result)
             } catch (error) {
@@ -581,7 +582,7 @@ async function run() {
 
                 const result = await wishListCollection.deleteOne({ package_id: id })
 
-                console.log('Removed from wishList: ', result);
+                // console.log('Removed from wishList: ', result);
 
                 res.send(result)
             } catch (error) {
@@ -633,7 +634,7 @@ async function run() {
 
                 const result = await cartCollection.insertOne(carItem)
 
-                console.log('Booked package: ', result);
+                // console.log('Booked package: ', result);
                 res.send(result)
             } catch (error) {
                 console.log(error);
@@ -747,7 +748,7 @@ async function run() {
                 const query = { type }
                 const result = await planeCollection.findOne(query)
 
-                console.log('tour plane: ', result);
+                // console.log('tour plane: ', result);
                 res.send(result)
             } catch (error) {
                 console.log(error);
