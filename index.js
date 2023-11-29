@@ -81,9 +81,11 @@ async function run() {
 
         /* verify admin after verify token */
         const verifyGuide = async (req, res, next) => {
-            // const { email } = req?.params;
+            const currentUser = req?.query;
             // const token = req?.cookies[ 'dream-place-token' ];
             const { email } = req?.user;
+
+            if (currentUser?.email !== email) return res.status(403).send({ message: 'Forbidden access.' })
             console.log(email);
             const query = { "contactDetails.email": email }
 
@@ -118,19 +120,20 @@ async function run() {
         const setTokenCookie = async (req, res, next) => {
             const user = req?.body;
 
-            // console.log(user);
-
             if (user?.email) {
                 const token = jsonwebtoken.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '24h' })
 
                 // console.log('Token generated: ', token);
                 res
                     .cookie('dream-place-token', token, {
-                        domain: "tourist-guides-mnh.web.app",
+                        // domain: [ "tourist-guides-mnh.web.app", "localhost:5173" ],
                         httpOnly: true,
                         secure: process.env.NODE_ENV === 'production',
                         sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+                        // secure: true,
+                        // sameSite: 'none'
                     })
+
                 req[ "dream-place-token" ] = token;
 
                 // console.log('Token Created: ', req[ "dream-place-token" ]);
@@ -688,6 +691,13 @@ async function run() {
             }
         })
 
+
+        /**
+         * ======================================================================
+         * GUIDE Strips APIs
+         * ======================================================================
+         * 
+         */
         /* Get guide's all trips  */
         app.get('/api/v1/guide-trips/:id', verifyToken, verifyGuide, async (req, res) => {
             try {
@@ -749,7 +759,7 @@ async function run() {
                  * Blog post APIs
                  * ================================================================
                 */
-        app.get('/api/v1/blogs', async (req, res) => {
+        app.get('/api/v1/blogs', async (_req, res) => {
             try {
                 const result = await blogCollection.find().toArray();
 
