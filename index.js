@@ -47,15 +47,18 @@ async function run() {
         const planeCollection = db.collection('planes');
         // const paymentCollection = db.collection('payments');
 
-
-        /* Auth APIs */
+        /**
+         * ===================================================
+         *  Auth APIs 
+         * ===================================================
+         * */
 
         /* Middleware JWT implementation */
         const verifyToken = async (req, res, next) => {
             try {
                 // console.log('the token to be verified: ', req?.cookies);
                 const token = req?.cookies?.[ "dream-place-token" ];
-
+                console.log('token from browser cookie: ', token);
 
                 if (!token) return res.status(401).send({ message: 'Unauthorized access' })
 
@@ -66,7 +69,7 @@ async function run() {
                         return res.status(401).send({ message: 'You are not authorized' })
                     }
 
-                    // console.log(decoded);
+                    console.log('Decoded token: ', decoded);
                     req.user = decoded;
                     next();
                 })
@@ -94,14 +97,17 @@ async function run() {
         }
 
         const verifyAdmin = async (req, res, next) => {
-            // const { email } = req?.params;
+            const currentUser = req?.query;
             // const token = req?.cookies[ 'dream-place-token' ];
             const { email } = req?.user;
+
+            if (currentUser?.email !== email) return res.status(403).send({ message: 'Forbidden access.' })
+
             // console.log(email);
             const query = { "contactDetails.email": email }
 
             const theUser = await userCollection.findOne(query)
-            //console.log('isAdmin : ', theUser);
+            // console.log('isAdmin : ', theUser);
 
             const isAdmin = theUser?.role === 'admin'
             if (!isAdmin) res.status(403).send({ message: 'Access Forbidden' })
@@ -109,7 +115,6 @@ async function run() {
             next();
         }
 
-        // console.log(process.env);
         const setTokenCookie = async (req, res, next) => {
             const user = req?.body;
 
@@ -121,6 +126,7 @@ async function run() {
                 // console.log('Token generated: ', token);
                 res
                     .cookie('dream-place-token', token, {
+                        domain: "tourist-guides-mnh.web.app",
                         httpOnly: true,
                         secure: process.env.NODE_ENV === 'production',
                         sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
@@ -164,7 +170,7 @@ async function run() {
          * ============================================
          */
         /* Create user */
-        app.post('/api/v1/users', async (req, res) => {
+        app.post('/api/v1/create-user', async (req, res) => {
             try {
                 const user = req.body;
 
@@ -194,28 +200,14 @@ async function run() {
 
                 const result = await userCollection.findOne(query);
 
-                console.log('User with a id: ', result);
+                // console.log('User with a id: ', result);
                 res.send(result)
             } catch (error) {
                 res.status(500).send({ error: true, message: error.message })
             }
         })
 
-        /* get the user by email */
-        app.get('/api/v1/current-user/:email', async (req, res) => {
-            try {
-                const { email } = req?.params;
-                const query = { "contactDetails.email": email }
-                const result = await userCollection.findOne(query);
-
-                // console.log(query, result);
-                res.send(result)
-            } catch (error) {
-                res.status(500).send({ error: true, message: error.message })
-            }
-        })
-
-        /* update the user of ID */
+        /* update the user of ID [admin] */
         app.put('/api/v1/update-user/:id', verifyToken, verifyAdmin, async (req, res) => {
             try {
                 const { id } = req?.params;
@@ -237,29 +229,17 @@ async function run() {
 
         /* Get all users [admin] */
         app.get('/api/v1/users', verifyToken, verifyAdmin, async (_req, res) => {
-            const result = await userCollection.find().toArray();
-            res.send(result)
-        })
-
-        /* Get all users of a role */
-        app.get('/api/v1/role-users/:role', async (req, res) => {
-            const { role } = req.params;
-
-            const query = {}
-
-            if (role) query.role = role;
-
-            // console.log(query);
-
-            const result = await userCollection.find(query).toArray();
-            return res.send(result)
-
-
-            // res.status(403).send({ message: 'Forbidden access' })
+            try {
+                const result = await userCollection.find().toArray();
+                res.send(result)
+            } catch (error) {
+                console.log(error);
+                res.status(500).send({ message: error?.message })
+            }
         })
 
         /* delete user [admin] */
-        app.delete('/api/v1/users/:id', verifyToken, verifyAdmin, async (req, res) => {
+        app.delete('/api/v1/delete-users/:id', verifyToken, verifyAdmin, async (req, res) => {
             try {
                 const { id } = req.params;
                 const query = { _id: new ObjectId(id) }
@@ -275,27 +255,19 @@ async function run() {
             }
         })
 
-        /* add admin [admin] */
-        // app.patch('/api/v1/users/admin/:id', verifyToken, async (req, res) => {
-        //     try {
-        //         const { id } = req.params;
+        /* get the user by email */
+        app.get('/api/v1/current-user/:email', async (req, res) => {
+            try {
+                const { email } = req?.params;
+                const query = { "contactDetails.email": email }
+                const result = await userCollection.findOne(query);
 
-        //         const query = { _id: new ObjectId(id) }
-
-        //         const updatedUser = {
-        //             $set: {
-        //                 role: 'admin'
-        //             }
-        //         }
-
-        //         const result = await userCollection.updateOne(query, updatedUser)
-
-        //         return res.send(result)
-        //     } catch (error) {
-        //         console.log(error);
-        //         res.status(500).send({ message: error?.message })
-        //     }
-        // })
+                // console.log(query, result);
+                res.send(result)
+            } catch (error) {
+                res.status(500).send({ error: true, message: error.message })
+            }
+        })
 
         /* get current user's role */
         app.get('/api/v1/user/authorization/:email', async (req, res) => {
@@ -315,6 +287,23 @@ async function run() {
                 console.log(error);
                 res.status(500).send({ message: error?.message })
             }
+        })
+
+        /* Get all users of a role */
+        app.get('/api/v1/role-users/:role', async (req, res) => {
+            const { role } = req.params;
+
+            const query = {}
+
+            if (role) query.role = role;
+
+            // console.log(query);
+
+            const result = await userCollection.find(query).toArray();
+            return res.send(result)
+
+
+            // res.status(403).send({ message: 'Forbidden access' })
         })
 
         /**
@@ -483,6 +472,7 @@ async function run() {
             }
         })
 
+        /* This two will apply in next version [Not in requirement] */
         /* update a package by ID */
         app.put('/api/v1/update-packages/:id', verifyToken, verifyAdmin, async (req, res) => {
             try {
@@ -629,128 +619,6 @@ async function run() {
             }
         })
 
-        /* Payment APIs */
-        // app.post("/api/v1/create-payment-intent", async (req, res) => {
-        //     const { price } = req.body;
-        //     // Create a PaymentIntent with the order amount and currency
-        //     // console.log(parseInt(price * 100));
-
-        //     const paymentIntent = await stripe.paymentIntents.create({
-        //         amount: parseInt(price * 100),
-        //         currency: "usd",
-        //         payment_method_types: [ 'card' ],
-        //     });
-
-        //     res.send({
-        //         clientSecret: paymentIntent.client_secret,
-        //     });
-        // });
-
-        // app.get('/api/v1/payments/:email', verifyToken, async (req, res) => {
-
-        //     const query = { email: req?.params?.email }
-
-        //     // console.log(req?.params?.email, req?.user?.email);
-
-        //     if (req?.params?.email !== req?.user?.email) return res.status(403).send({ message: 'Forbidden access' })
-
-        //     const paymentResult = await paymentCollection.find(query).toArray();
-
-        //     // console.log(paymentResult);
-
-        //     res.send(paymentResult)
-        // })
-
-        // app.post('/api/v1/payments', async (req, res) => {
-        //     const payment = req.body;
-        //     console.log(payment);
-
-        //     const paymentResult = await paymentCollection.insertOne(payment);
-
-        //     console.log(paymentResult);
-
-        //     const query = {
-        //         _id: {
-        //             $in: payment.cartIds.map(id => new ObjectId(id))
-        //         }
-        //     }
-
-        //     const deleteResult = await cartCollection.deleteMany(query)
-
-        //     res.send({ paymentResult, deleteResult })
-        // })
-
-        // /* aggregate pipeline */
-        // app.get('/api/v1/order-stats', verifyToken, verifyAdmin, async (_req, res) => {
-        //     // app.get('/api/v1/order-stat', async (_req, res) => {
-        //     const result = await paymentCollection.aggregate([
-        //         { $unwind: '$menuItemIds' },
-        //         { "$project": { "menuItemId": { "$toObjectId": "$menuItemIds" } } },
-        //         {
-        //             $lookup: {
-        //                 from: 'menu',
-        //                 localField: 'menuItemId',
-        //                 foreignField: '_id',
-        //                 as: 'menuItems',
-        //             }
-        //         },
-        //         { $unwind: '$menuItems' },
-        //         {
-        //             $group: {
-        //                 _id: '$menuItems.category',
-        //                 quantity: { $sum: 1 },
-        //                 revenue: { $sum: '$menuItems.price' }
-        //             }
-        //         },
-        //         /* to rename _id key [_id to category] */
-        //         {
-        //             $project: {
-        //                 _id: 0,
-        //                 category: '$_id',
-        //                 quantity: '$quantity',
-        //                 revenue: '$revenue'
-        //             }
-        //         }
-
-        //     ]).toArray();
-
-        //     console.log(result[ 0 ]);
-
-        //     res.send(result)
-        // })
-
-        // app.get('/api/v1/admin-stats', verifyToken, verifyAdmin, async (_req, res) => {
-        //     try {
-        //         const users = await userCollection.estimatedDocumentCount();
-        //         const menuItems = await menuCollection.estimatedDocumentCount();
-        //         const orders = await paymentCollection.estimatedDocumentCount();
-
-        //         const aggregateResult = await paymentCollection.aggregate([
-        //             {
-        //                 $group: {
-        //                     _id: null,
-        //                     totalRevenue: {
-        //                         $sum: '$price'
-        //                     }
-        //                 }
-        //             }
-        //         ]).toArray();
-
-        //         const revenue = aggregateResult?.length > 0 ? aggregateResult[ 0 ].totalRevenue : 0
-
-        //         console.log({
-        //             users, menuItems, orders, revenue
-        //         });
-
-        //         res.send({
-        //             users, menuItems, orders, revenue
-        //         })
-        //     } catch (error) {
-        //         console.log(error);
-        //         res.status(500).send({ message: error?.message })
-        //     }
-        // })
-
         /**
         * ================================================================
         * BOOKING APIs
@@ -885,13 +753,14 @@ async function run() {
             try {
                 const result = await blogCollection.find().toArray();
 
-                console.log('Blog Posts: ', result);
+                // console.log('Blog Posts: ', result);
                 res.send(result)
             } catch (error) {
                 console.log(error);
                 res.status(500).send({ message: error?.message })
             }
         })
+
     } catch (error) {
         console.log(error);
     }
